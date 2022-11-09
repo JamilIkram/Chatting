@@ -1,0 +1,142 @@
+<!doctype html>
+<html>
+<head>
+    <title>Socket.IO chat</title>
+    <link rel="shortcut icon" href="images/Graphicloads-100-Flat-2-Chat-2.ico">
+    <style>
+        html, body {
+            background-image: url('images/party.jpg');
+            background-size: cover;
+            background-repeat: no-repeat;
+            height: 100%;
+            font-family: 'Numans', sans-serif;
+        }
+        #dropContainer {
+            border: 1px solid black;
+            height: 20px;
+            width: 40px;
+            float:right;
+            background-color:darkgrey;
+        }
+        #divUser {
+            text-align: center;
+            background-color: darkgrey;
+        }
+        #div1 {
+            width: 350px;
+            margin: 0 auto;
+            background-color: rgb(255, 247, 247);
+            box-shadow: 0 0 5px red;
+            border-radius: 10px;
+            padding: 20px;
+            opacity: 0.8;
+            background-image: url('images/Singup.jpg');
+            border-radius: 10px;
+        }
+        #messages {
+            overflow-y: scroll;
+            height: 150px;
+            background: darkgrey;
+            border-radius: 10px;
+        }
+
+    </style>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/js/jquery-3.4.1.min.js"></script>
+    <script>
+        $(function () {
+            var strUserInfo = sessionStorage.getItem('userInfo');
+            var oUserInfo = JSON.parse(strUserInfo);
+           if(oUserInfo===null){
+              window.location.replace("http://localhost:3000");
+            }
+            $('#user').text(oUserInfo.userId);
+            var socket = io();
+            $('#formMessage').submit(function(e) {
+                e.preventDefault(); // prevents page reloading
+                if($('#m').val()===null || $('#m').val() === ''){
+                  alert('Type a word to send message');
+                }else{
+                  var currentDateTime = new Date();
+                  var newDateTime = currentDateTime.toLocaleDateString() + ' ' + currentDateTime.toLocaleTimeString();
+                    var oMessage = {
+                        "userId": oUserInfo.userId,
+                        "message": $('#m').val(),
+                        "dateTime": newDateTime
+                    };
+                  socket.emit('chat message', oMessage );
+                  $('#m').val('');
+                  return false;
+                }
+            });
+           socket.on('chat message', function(msg){
+                var htmlElements ='<strong>'+ msg.userId+'</strong>: '+msg.message+'<br/><span style="color:#7f8680">'+msg.dateTime+'</span>';
+                $('#messages').append($('<li>').html(htmlElements));
+            });
+             $("#formFileUpload").submit(function(evt){
+              evt.preventDefault();
+              var formData = new FormData($(this)[0]);
+              var f =$('#fileInput').val();
+              if($('#fileInput').val()===''){
+                alert('Attach a file to upload');
+              }else{
+                $.ajax({
+                  url: 'uploadfile',
+                  type: 'POST',
+                  data: formData,
+                  async: false,
+                  cache: false,
+                  contentType: false,
+                  enctype: 'multipart/form-data',
+                  processData: false,
+                  success: function (response) {
+                    var res = JSON.parse(response);
+                    var currentDateTime = new Date();
+                    var newDateTime = currentDateTime.toLocaleDateString() + ' ' + currentDateTime.toLocaleTimeString();
+                    var oMessage = { "userId":oUserInfo.userId, "message":'<a href="'+res.filePath+'" target="_blank">'+res.fileName+'</a>', "dateTime":newDateTime };
+                    socket.emit('chat message', oMessage );
+                    $('#fileInput').val('');
+                  }
+                });
+                return false;
+              }
+            });
+        });
+ </script>
+</head>
+<body background="images/party.jpg">
+    <div id="div1">
+        <div id="divUser">
+            <h>Here we Start Gossiping, </h><h id="user"></h>
+        </div>
+        <br />
+        <ul id="messages"></ul>
+       
+        <form id="formFileUpload">
+            <input type="file" name="fileInput" id="fileInput" multiple>
+            <input type="submit" value="Upload">
+        </form>
+        <br />
+        <form action="" id="formMessage">
+
+            <input id="m" autocomplete="off" />&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp&nbsp
+            <button>Send</button>
+            <div id="dropContainer">
+                Drop
+            </div>
+        </form>
+    </div>
+    <script>
+        dropContainer.ondragover = dropContainer.ondragenter = function (evt) {
+            evt.preventDefault();
+        };
+        dropContainer.ondrop = function (evt) {
+            fileInput.files = evt.dataTransfer.files;
+            const dT = new DataTransfer();
+            dT.items.add(evt.dataTransfer.files[0]);
+            fileInput.files = dT.files;
+            evt.preventDefault();
+        };
+    </script>
+</body>
+</html>
